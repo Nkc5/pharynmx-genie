@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  nestjs_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7000:5000"  # Assuming NestJS app runs on port 3000
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"  # Assuming Redis runs on default port 6379

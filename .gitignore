@@ -1,0 +1,14 @@
+node_modules/
+.next/
+dist/
+speech/
+public/speech
+serverB/
+server.zip
+clientB/
+client.zip
+.venv
+TalkingAvatarVoices*
+VideoRetalkingFinalAvatarImages*
+VideoRetalkingSourceVideos*
+uploadBlob.py
