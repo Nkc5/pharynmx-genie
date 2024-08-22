@@ -402,6 +402,4 @@ dist
 .serverless/**/*.zip
 
 
-server/image-generator-431606-07b4d040681c.json
-server/.env.development
-server/.env.production
+image-generator-431606-07b4d040681c.json
