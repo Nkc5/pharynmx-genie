@@ -17,12 +17,12 @@ import { Queue } from 'bull';
 import { AzureService } from 'libs/azure/src';
 import path, { dirname } from 'path';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 import { JobStatus, VR, VRSchema } from 'src/schemas/vr.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { VRService } from './vr.service';
 import { Response } from 'express';
-
 
 @Controller('videoretalking')
 export class VRController {
@@ -181,66 +181,84 @@ export class VRController {
     return newJobStatus.jobId;
   }
 
+  @Post('audio')
+  async GetAudioPreview(
+    @Body() body,
+    @Res() res: Response,
+    @Req() req: Request,
+  ) {
+    console.log('body', body);
 
+    try {
+      let clerkId = req['clerkId'];
 
-@Post('audio')
-async GetAudioPreview(@Body() body, @Res() res: Response){
-console.log("body", body);
+      const locale = body.voice.substring(
+        body.voice.length - 5,
+        body.voice.length,
+      );
 
+      // Split task into chunks of 20 words
 
-try {
-  
-  const locale = body.voice.substring(body.voice.length - 5, body.voice.length);
- 
-  // Split task into chunks of 20 words
-  const words = body.text.split(' ');
-  const chunks = [];
-  let currentChunk = '';
+      const words = body.text.split(' ');
+      const chunks = [];
+      let currentChunk = '';
 
-  for (const word of words) {
-    if ((currentChunk + word).split(' ').length <= 20) {
-      currentChunk += word + ' ';
-    } else {
-      chunks.push(currentChunk.trim());
-      currentChunk = word + ' ';
+      for (const word of words) {
+        if ((currentChunk + word).split(' ').length <= 20) {
+          currentChunk += word + ' ';
+        } else {
+          chunks.push(currentChunk.trim());
+          currentChunk = word + ' ';
+        }
+      }
+
+      // Push the last remaining chunk
+      if (currentChunk.trim() !== '') {
+        chunks.push(currentChunk.trim());
+      }
+      // console.log(chunks);
+      // return chunks
+
+      // Call TTS API for each chunk
+      const results = [];
+      for (const chunk of chunks) {
+        const { filename }: any = await this.azureService.textToSpeech(
+          chunk,
+          `${locale}-${body.voice.split('-')[1]}`,
+          locale,
+        );
+        const dir = 'public' + filename;
+        results.push(dir);
+      }
+
+      const buffers = await Promise.all(
+        results.map(async (file) => {
+          const data = await fs.promises.readFile(file);
+          return data;
+        }),
+      );
+
+      console.log('buffers', buffers);
+
+      // Concatenate buffers
+      const concatenatedBuffer = Buffer.concat(buffers);
+
+      const uuid = crypto.randomUUID();
+
+      const outputPath = path.join('public/speech', `${uuid}.wav`);
+
+      // Write the concatenated buffer to a new file
+      await fs.promises.writeFile(outputPath, concatenatedBuffer);
+
+      const newPath = outputPath.replace('public', "");
+      console.log("newPath", newPath)
+
+      return res.send({ fileName: newPath });
+    } catch (error) {
+      console.log('error', error.message);
+      return res.json(error.message);
     }
   }
-
-  // Push the last remaining chunk
-  if (currentChunk.trim() !== '') {
-    chunks.push(currentChunk.trim());
-  }
- 
-
-  // Call TTS API for each chunk
-  const results = [];
-  // let filename = null;
-  for (const chunk of chunks) {
-     var filename  = await this.azureService.textToSpeech(
-      chunk,
-      `${locale}-${body.voice.split('-')[1]}`,
-      locale.toString(),
-    );   
-  }
-
-  console.log("filename", filename);
-  // return filename;   // http://localhost:5001/speech/speech-9yaav.wav
-  // return;
-// }
-
-  // res.setHeader('Content-Type', 'audio/mpeg');
-  return res.send(filename)
-  
-  
-} catch (error) {
-console.log("error", error.message);
-return res.json(error.message);
-
-}
-
-
-
-}
 
   @Get()
   async getFile(@Query('url') url: string) {
@@ -258,35 +276,37 @@ return res.json(error.message);
   //   if (!data) throw new HttpException('User Not Found', HttpStatus.NOT_FOUND);
   //   return data.jobs;
   // }
-  
+
   @Get('/history')
   async getHistory(@Req() req: Request) {
     const page = parseInt(req['query'].page as string) || 1;
     const limit = parseInt(req['query'].limit as string) || 10;
     const skip = (page - 1) * limit;
-  
-    const data = await this.vrModel.findOne({
-      clerkId: req['clerkId'],
-    }).sort({ createdAt: -1 });
-    console.log("205====",data);
+
+    const data = await this.vrModel
+      .findOne({
+        clerkId: req['clerkId'],
+      })
+      .sort({ createdAt: -1 });
+    console.log('205====', data);
     if (!data) throw new HttpException('User Not Found', HttpStatus.NOT_FOUND);
-  
+
     // Using pagination directly within the query
     const paginatedJobs = await this.vrModel.aggregate([
       { $match: { clerkId: req['clerkId'] } },
-      { $unwind: "$jobs" },
-      { $sort: { "jobs.createdAt": -1 } },
+      { $unwind: '$jobs' },
+      { $sort: { 'jobs.createdAt': -1 } },
       { $skip: skip },
       { $limit: limit },
-      { $group: { _id: "$_id", jobs: { $push: "$jobs" } } }
+      { $group: { _id: '$_id', jobs: { $push: '$jobs' } } },
     ]);
-  
+
     if (!paginatedJobs || !paginatedJobs.length) {
       return { page, limit, total: 0, jobs: [] };
     }
-  
+
     const totalJobs = data.jobs.length;
-    
+
     return {
       page,
       limit,

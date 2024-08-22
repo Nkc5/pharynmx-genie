@@ -35,9 +35,8 @@ export class HDController {
     @InjectModel('hd') private readonly hdModel: Model<HD>,
   ) {}
 
-  @Post()
+  @Post('')
   @UseInterceptors(FileInterceptor('file'))
-
   async transcode(
     @Req() req: Request, 
     @Body() body: hdQuery,
@@ -45,6 +44,10 @@ export class HDController {
     file: Express.Multer.File,
   ) {
     let clerkId = req['clerkId'];
+
+    console.log("in controller");
+    console.log("body", body);
+    console.log("file", file);
     
     const uploadedPath = await this.azureService.uploadFile(
       `headshot/${clerkId}/cache/${crypto.randomUUID()}`,

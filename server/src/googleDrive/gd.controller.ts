@@ -31,7 +31,7 @@ export class GDcontroller {
   async uploadImage(@Body() body: any, @Res() res) {
     const { fileBase64, access_token } = body;
 
-    console.log("body", body);
+    // console.log("body", body);
 
     if (access_token) {
       this.oauth2client.setCredentials({ access_token: access_token });
@@ -53,7 +53,7 @@ export class GDcontroller {
 
       // Convert Buffer to a readable stream
       const stream = Readable.from(decodedData);
-      console.log('stream', stream);
+      // console.log('stream', stream);
 
       const random = crypto.randomUUID();
 
@@ -68,7 +68,7 @@ export class GDcontroller {
         },
       });
 
-      console.log('resp', resp.data);
+      // console.log('resp', resp.data);
       const fileId = resp.data.id;
 
       // Using the below lines you can generate a public download link and view link. webContentLink is the download link. webViewLink is the online view link.
@@ -86,7 +86,7 @@ export class GDcontroller {
         fields: 'webContentLink, webViewLink',
       });
 
-      console.log('result', result.data);
+      // console.log('result', result.data);
 
       return res.send(result.data);
 

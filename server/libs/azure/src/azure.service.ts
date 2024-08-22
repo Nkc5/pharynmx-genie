@@ -24,7 +24,7 @@ export class AzureService {
       // </voice>
       // </speak>`;
       let ssml = SSML.replace('__VOICE__', voice);
-      console.log('text', text);
+      // console.log('text', text);
       console.log('voice', voice);
       console.log('locale', locale);
 
