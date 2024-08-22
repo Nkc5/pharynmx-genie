@@ -400,3 +400,8 @@ Temporary Items
 dist
 .webpack
 .serverless/**/*.zip
+
+
+server/image-generator-431606-07b4d040681c.json
+server/.env.development
+server/.env.production
